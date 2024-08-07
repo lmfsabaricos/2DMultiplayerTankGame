@@ -5,24 +5,27 @@ import tankgamepack.Resources.ResourceManager;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-public class BreakableWall extends Wall/*extends Wall*/ {
+public class BreakableWall extends Wall {
     private float x;
     private float y;
     private BufferedImage img;
+    private BufferedImage brokenImg;
     private boolean isBroken = false;
-    public BreakableWall(float x, float y, BufferedImage sprite) {
+
+    public BreakableWall(float x, float y, BufferedImage sprite, BufferedImage brokenSprite) {
         super(x, y, sprite);
         this.x = x;
         this.y = y;
         this.img = sprite;
+        this.brokenImg = brokenSprite;
     }
 
     @Override
     public void drawImage(Graphics buffer) {
         buffer.drawImage(this.img, (int)x, (int)y, null);
-        buffer.drawRect((int)this.x,(int)this.y, this.img.getWidth(), this.img.getHeight());
-
+        buffer.drawRect((int)this.x, (int)this.y, this.img.getWidth(), this.img.getHeight());
     }
+
     @Override
     public Rectangle getHitbox() {
         return hitbox.getBounds();
@@ -30,7 +33,7 @@ public class BreakableWall extends Wall/*extends Wall*/ {
 
     public void updateImage() { // called in BulletClass
         this.isBroken = true;
-        this.img = ResourceManager.getSprite("broken");
+        this.img = this.brokenImg;
     }
 
     public boolean getIsBroken() {

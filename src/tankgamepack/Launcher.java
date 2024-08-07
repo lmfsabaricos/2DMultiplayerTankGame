@@ -12,15 +12,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 
 public class Launcher {
-
     private JPanel mainPanel;
     private GameWorld gamePanel;
     private final JFrame jf;
     private CardLayout cl;
     private Thread gameThread;
     private boolean isFullScreen = false;
-    private GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0];
-    private EndGamePanel endPanel;
+    private final GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0];
 
     public Launcher() {
         this.jf = new JFrame();
@@ -33,14 +31,14 @@ public class Launcher {
         JPanel startPanel = new StartMenuPanel(this);
         this.gamePanel = new GameWorld(this);
         this.gamePanel.InitializeGame();
-        this.endPanel = new EndGamePanel(this);
+        JPanel endPanel = new EndGamePanel(this);
         cl = new CardLayout();
         this.mainPanel.setLayout(cl);
         this.mainPanel.add(startPanel, "start");
         this.mainPanel.add(gamePanel, "game");
         this.mainPanel.add(endPanel, "end");
         this.jf.add(mainPanel);
-        this.jf.setResizable(true); // Allow the JFrame to be resizable
+        this.jf.setResizable(true);
         this.setFrame("start");
 
         addFullScreenToggle();
@@ -61,15 +59,13 @@ public class Launcher {
     public void setFrame(String type) {
         this.jf.setVisible(false);
         switch (type) {
-            case "start" ->
-                    this.jf.setSize(GameConstants.START_MENU_SCREEN_WIDTH, GameConstants.START_MENU_SCREEN_HEIGHT);
+            case "start" -> this.jf.setSize(GameConstants.START_MENU_SCREEN_WIDTH, GameConstants.START_MENU_SCREEN_HEIGHT);
             case "game" -> {
                 this.jf.setSize(GameConstants.GAME_SCREEN_WIDTH, GameConstants.GAME_SCREEN_HEIGHT);
                 gameThread = new Thread(this.gamePanel);
                 gameThread.start();
             }
-            case "end" ->
-                    this.jf.setSize(GameConstants.END_MENU_SCREEN_WIDTH, GameConstants.END_MENU_SCREEN_HEIGHT);
+            case "end" -> this.jf.setSize(GameConstants.END_MENU_SCREEN_WIDTH, GameConstants.END_MENU_SCREEN_HEIGHT);
         }
         this.cl.show(mainPanel, type);
         this.jf.setVisible(true);
@@ -104,9 +100,14 @@ public class Launcher {
     }
 
     public void setWinner(int winnerId) {
-        String winnerMessage = winnerId == 1 ? "Red Tank Wins!" : "Blue Tank Wins!";
-        endPanel.setWinnerMessage(winnerMessage);
+        String winner = winnerId == 1 ? "Red Tank" : "Blue Tank";
+        EndGamePanel.setWinner(winner);
         setFrame("end");
+    }
+
+    public void restartGame() {
+        gamePanel.requestReset();
+        setFrame("game");
     }
 
     public static void main(String[] args) {

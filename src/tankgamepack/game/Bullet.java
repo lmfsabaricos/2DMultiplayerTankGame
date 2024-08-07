@@ -12,13 +12,12 @@ public class Bullet extends GameObject implements MovableObjects {
     private float y;
     private float vx;
     private float vy;
-    BufferedImage img;
+    private BufferedImage img;
     private float angle;
     private float R = 5;
     private int owner;
     private Rectangle hitbox;
     private boolean hasCollided = false;
-
 
     public Bullet(float x, float y, BufferedImage sprite) {
         this.x = x;
@@ -26,7 +25,7 @@ public class Bullet extends GameObject implements MovableObjects {
         this.img = sprite;
         this.vx = 2;
         this.vy = 2;
-        this.hitbox = new Rectangle((int) x, (int) y, this.img.getWidth()*2, this.img.getHeight()*2);
+        this.hitbox = new Rectangle((int) x, (int) y, this.img.getWidth() * 2, this.img.getHeight() * 2);
     }
 
     public void update() {
@@ -34,34 +33,19 @@ public class Bullet extends GameObject implements MovableObjects {
         this.vy = Math.round(this.R * Math.sin(Math.toRadians(angle)));
         this.x += this.vx;
         this.y += this.vy;
-
-        this.hitbox.setLocation((int)this.x, (int)this.y);
+        this.hitbox.setLocation((int) this.x, (int) this.y);
+        checkBorder();
     }
 
-    private void checkBorder() { // game screen measurements should be changed to game world measurements
-        if (x < 30) {
-            x = 30;
-            this.hasCollided = true;
-        }
-        if (x >= GameConstants.GAME_WORLD_WIDTH - 46) {
-            x = GameConstants.GAME_WORLD_WIDTH - 46;
-            this.hasCollided = true;
-        }
-        if (y < 30) {
-            y = 30;
-            this.hasCollided = true;
-        }
-        if (y >= GameConstants.GAME_WORLD_HEIGHT - 46) {
-            y = GameConstants.GAME_WORLD_HEIGHT - 46;
+    private void checkBorder() {
+        if (x < 30 || x >= GameConstants.GAME_WORLD_WIDTH - 46 || y < 30 || y >= GameConstants.GAME_WORLD_HEIGHT - 46) {
             this.hasCollided = true;
         }
     }
 
-    //called when shoot is pressed. Spawns bullet at position
     public void spawnBullet(float x, float y, float angle, int owner) {
-
-        this.x = x+17;
-        this.y = y+15;
+        this.x = x + 17;
+        this.y = y + 15;
         this.angle = angle;
         this.owner = owner;
     }
@@ -73,11 +57,10 @@ public class Bullet extends GameObject implements MovableObjects {
     @Override
     public void drawImage(Graphics g) {
         AffineTransform rotation = AffineTransform.getTranslateInstance(x, y);
-        rotation.scale(2,2);
+        rotation.scale(2, 2);
         rotation.rotate(Math.toRadians(angle), this.img.getWidth() / 2.0, this.img.getHeight() / 2.0);
         Graphics2D g2d = (Graphics2D) g;
         g2d.drawImage(this.img, rotation, null);
-
     }
 
     @Override
@@ -87,16 +70,17 @@ public class Bullet extends GameObject implements MovableObjects {
 
     @Override
     public void collides(GameObject with) {
-
-        if (with instanceof Tank) { // object collision with tank
-            hasCollided = ((Tank) with).getId() != this.owner;
+        if (with instanceof Tank) {
+            if (((Tank) with).getId() != this.owner) {
+                ((Tank) with).takeDamage();
+                this.hasCollided = true;
+            }
         } else if (with instanceof Wall) {
             hasCollided = true;
             if (with instanceof BreakableWall) {
                 ((BreakableWall) with).updateImage();
             }
         }
-
     }
 
     public Animation playExplode() {

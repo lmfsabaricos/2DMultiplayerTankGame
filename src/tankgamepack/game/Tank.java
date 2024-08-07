@@ -1,9 +1,8 @@
 package tankgamepack.game;
 
 import tankgamepack.GameConstants;
-import tankgamepack.Resources.Pair;
-import tankgamepack.Resources.ResourceManager;
 import tankgamepack.Resources.ResourcePool;
+import tankgamepack.Resources.ResourceManager;
 
 import java.awt.*;
 import java.awt.geom.AffineTransform;
@@ -13,41 +12,39 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-/**
- *
- * @author anthony-pc
- */
-public class Tank extends GameObject implements MovableObjects{ // normally player and tank are seperated
-    //private float cameraX, cameraY;
-    private List<PowerUp> activeBuffs = new ArrayList<>(); //power ups
+public class Tank extends GameObject implements MovableObjects {
+    private List<PowerUp> activeBuffs = new ArrayList<>();
     private static ResourcePool<Bullet> bulletPool = new ResourcePool<>("bullet", 300);
-    static {
-        bulletPool.fillPool(Bullet.class, 300);
-    }
     private int lives = 3;
-    static int count = 0;
-    int id;
+    private static int count = 0;
+    private int id;
     private float x;
     private float y;
-    private float vx = 0; // change in x
-    private float vy = 0; // change in y
-    private float angle; // way tank is facing
-
-    private float R = 5; // movement speed
+    private float vx = 0;
+    private float vy = 0;
+    private float angle;
+    private float R = 5;
     private float ROTATIONSPEED = 3.0f;
-
     private BufferedImage img;
-    private boolean UpPressed;
-    private boolean DownPressed;
-    private boolean RightPressed;
-    private boolean LeftPressed;
+    private boolean upPressed;
+    private boolean downPressed;
+    private boolean rightPressed;
+    private boolean leftPressed;
     private boolean shootPressed;
     private long timeSinceLastShot = 0L;
     private long cooldown = 2000;
-    Rectangle hitbox;
+    private Rectangle hitbox;
     private boolean canShoot;
+    private long lastDamageTime = 0;
+    private static final long DAMAGE_COOLDOWN = 500;
+    private boolean hasShield = false;
+    private int shieldCount = 0;
 
-    Tank(float x, float y, float angle, BufferedImage img) {
+    static {
+        bulletPool.fillPool(Bullet.class, 300);
+    }
+
+    public Tank(float x, float y, float angle, BufferedImage img) {
         this.x = x;
         this.y = y;
         this.img = img;
@@ -55,63 +52,70 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
         count++;
         this.id = count;
         this.hitbox = new Rectangle((int) x, (int) y, this.img.getWidth(), this.img.getHeight());
-
     }
 
-    void setX(float x){ this.x = x; }
-
-    void setY(float y) { this. y = y;}
-
-    void toggleUpPressed() {
-        this.UpPressed = true;
+    public void setX(float x) {
+        this.x = x;
     }
 
-    void toggleDownPressed() {
-        this.DownPressed = true;
+    public void setY(float y) {
+        this.y = y;
     }
 
-    void toggleRightPressed() {
-        this.RightPressed = true;
+    public void toggleUpPressed() {
+        this.upPressed = true;
     }
 
-    void toggleLeftPressed() {
-        this.LeftPressed = true;
+    public void toggleDownPressed() {
+        this.downPressed = true;
     }
 
-    void unToggleUpPressed() {
-        this.UpPressed = false;
+    public void toggleRightPressed() {
+        this.rightPressed = true;
     }
 
-    void unToggleDownPressed() {
-        this.DownPressed = false;
+    public void toggleLeftPressed() {
+        this.leftPressed = true;
     }
 
-    void unToggleRightPressed() {
-        this.RightPressed = false;
+    public void unToggleUpPressed() {
+        this.upPressed = false;
     }
 
-    void unToggleLeftPressed() {
-        this.LeftPressed = false;
+    public void unToggleDownPressed() {
+        this.downPressed = false;
+    }
+
+    public void unToggleRightPressed() {
+        this.rightPressed = false;
+    }
+
+    public void unToggleLeftPressed() {
+        this.leftPressed = false;
+    }
+
+    public void toggleShootPressed() {
+        shootPressed = true;
+    }
+
+    public void untoggleShootPressed() {
+        shootPressed = false;
     }
 
     public void update() {
-        updateBuffs(); // updates status before moving tank
-        if (this.UpPressed) {
+        updateBuffs();
+        if (this.upPressed) {
             this.moveForwards();
         }
-
-        if (this.DownPressed) {
+        if (this.downPressed) {
             this.moveBackwards();
         }
-
-        if (this.LeftPressed) {
+        if (this.leftPressed) {
             this.rotateLeft();
         }
-
-        if (this.RightPressed) {
+        if (this.rightPressed) {
             this.rotateRight();
         }
-
         if (this.shootPressed && ((this.timeSinceLastShot + this.cooldown) < System.currentTimeMillis())) {
             canShoot = true;
             (ResourceManager.getSound("firing")).playSound();
@@ -119,10 +123,7 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
         } else {
             canShoot = false;
         }
-        //this.ammo.forEach(Bullet::update);
-
-        this.hitbox.setLocation((int)this.x, (int)this.y);
-
+        this.hitbox.setLocation((int) this.x, (int) this.y);
     }
 
     private void rotateLeft() {
@@ -134,11 +135,11 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
     }
 
     private void moveBackwards() {
-        vx =  Math.round(R * Math.cos(Math.toRadians(angle)));
-        vy =  Math.round(R * Math.sin(Math.toRadians(angle)));
+        vx = Math.round(R * Math.cos(Math.toRadians(angle)));
+        vy = Math.round(R * Math.sin(Math.toRadians(angle)));
         x -= vx;
         y -= vy;
-       checkBorder();
+        checkBorder();
     }
 
     private void moveForwards() {
@@ -149,8 +150,7 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
         checkBorder();
     }
 
-
-    private void checkBorder() { // game screen measurements should be changed to game world measurements
+    private void checkBorder() {
         if (x < 30) {
             x = 30;
         }
@@ -178,109 +178,51 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
         g2d.drawImage(this.img, rotation, null);
         g2d.setColor(Color.WHITE);
 
-        g2d.drawRect((int)x-30,(int)y-20,100, 15); // place cooldown bar above tank
-        long currentWidth = 100 - ((this.timeSinceLastShot + this.cooldown) - System.currentTimeMillis())/20;
+        // Draw cooldown bar above the tank
+        g2d.drawRect((int) x - 30, (int) y - 20, 100, 15);
+        long currentWidth = 100 - ((this.timeSinceLastShot + this.cooldown) - System.currentTimeMillis()) / 20;
         if (currentWidth > 100) {
             currentWidth = 100;
         }
         g2d.setColor(Color.GREEN);
-        g2d.fillRect((int)x-30, (int)y-20, (int)currentWidth, 15);
+        g2d.fillRect((int) x - 30, (int) y - 20, (int) currentWidth, 15);
 
-
+        // Draw lives as small rectangles
         for (int i = this.lives; i > 0; i--) {
             g2d.setColor(Color.RED);
-            g2d.fillRect((int)x+(15*i), (int)y+70, 25, 15);
+            g2d.fillRect((int) x + (15 * i), (int) y + 70, 25, 15);
             g2d.setColor(Color.BLACK);
-            g2d.drawRect((int)x+(15*i),(int)y+70,25, 15); // place cooldown bar above tank
+            g2d.drawRect((int) x + (15 * i), (int) y + 70, 25, 15);
         }
 
+        // Draw lives count as text
+        g2d.setFont(new Font("Arial", Font.BOLD, 16));
+        g2d.setColor(Color.WHITE);
+        g2d.drawString("Lives: " + lives, (int) x, (int) y - 10);
+
+        // Draw shield count as text
+        g2d.drawString("Shields: " + shieldCount, (int) x, (int) y - 30);
     }
 
-    public float getX() {
-        return x;
-    }
-
-    public float getY() {
-        return y;
-    }
-
-    public BufferedImage cameraPosition(BufferedImage world) {
-        int cameraX, cameraY;
-        BufferedImage screenSide;
-
-        //check for x axis border
-        if ((int) this.x <= GameConstants.GAME_SCREEN_WIDTH/4) { // checks if too far left
-            cameraX = GameConstants.GAME_SCREEN_WIDTH/4;
-        } else if ((int) this.x >= (3*(GameConstants.GAME_SCREEN_WIDTH/4))+((GameConstants.GAME_SCREEN_WIDTH/4)*2)) { // checks for right edge
-            cameraX = (3*(GameConstants.GAME_SCREEN_WIDTH/4))+((GameConstants.GAME_SCREEN_WIDTH/4)*2);
-        } else { // default behavior (follow tank)
-            cameraX = (int) this.x;
-        }
-
-        //check for y axis border
-        if ((int) this.y <= GameConstants.GAME_SCREEN_HEIGHT/2) { // checks if too high up
-            cameraY = GameConstants.GAME_SCREEN_HEIGHT/2;
-        } else if (this.y >= GameConstants.GAME_SCREEN_HEIGHT) {
-            cameraY = GameConstants.GAME_SCREEN_HEIGHT;
-        } else {
-            cameraY = (int) this.y;
-        }
-
-        screenSide = world.getSubimage(
-                cameraX - GameConstants.GAME_SCREEN_WIDTH/4,
-                cameraY - GameConstants.GAME_SCREEN_HEIGHT/2,
-                GameConstants.GAME_SCREEN_WIDTH/2, GameConstants.GAME_SCREEN_HEIGHT);
-
-        return screenSide;
-    }
-
-    public void toggleShootPressed() {
-        shootPressed = true;
-    }
-
-    public void untoggleShootPressed() {
-        shootPressed = false;
-    }
-
-    @Override
-    public Rectangle getHitbox() {
-        return hitbox.getBounds();
-    }
-
-    @Override
-    public void collides(GameObject with) {
-
-        if (with instanceof Bullet) {
-            if (((Bullet) with).getOwner() != this.id) {
+    public void takeDamage() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastDamageTime >= DAMAGE_COOLDOWN) {
+            if (hasShield && shieldCount > 0) {
+                shieldCount--;  // Decrease shield count
+                if (shieldCount == 0) {
+                    hasShield = false;  // Deactivate shield if no shields are left
+                }
+            } else {
                 this.lives--;
             }
-            //.println("TANK " + this.id + "   " + this.lives);
-        } else if (with instanceof Wall) {
-            if (with instanceof BreakableWall && ((BreakableWall) with).getIsBroken()) { // if wall broken
-                return;
-            } else {
-                wallCollision();
-            }
-        } else if (with instanceof PowerUp) {
-            //((PowerUp) with).activatePowerUp(this);
-            if (with instanceof SpeedPowerUp) {
-                ((SpeedPowerUp) with).setActivationHealth(this.lives);
-                this.R += 2;
-            } else if (with instanceof HealthPowerUp) {
-                ((HealthPowerUp) with).setActivationHealth(this.lives);
-                this.lives++;
-            }
-            (ResourceManager.getSound("powerup")).playSound();
-
-            activeBuffs.add((PowerUp) with);
+            lastDamageTime = currentTime;
         }
-
     }
 
-    public Bullet addBulletToGameObjs() { // this could be the shoot action
+    public Bullet addBulletToGameObjs() {
         if (canShoot) {
             Bullet temp = bulletPool.getResource();
-            temp.spawnBullet(this.x, this.y, this.angle, this.id); // do NOT understand why this did not correct for the bullet being at 0,0 when the bullet was spawned.
+            temp.spawnBullet(this.x, this.y, this.angle, this.id);
             return temp;
         }
         return null;
@@ -291,7 +233,7 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
     }
 
     @Override
-    public boolean expired() { // tank expires when lives is 0
+    public boolean expired() {
         return this.lives <= 0;
     }
 
@@ -307,20 +249,53 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
             }
         }
 
-        for (PowerUp powerUp : toRemove) {
-            this.activeBuffs.remove(powerUp);
+        while (!toRemove.isEmpty()) {
+            this.activeBuffs.remove(toRemove.remove());
         }
     }
 
-    private void wallCollision() { // tank behavior towards walls
+    @Override
+    public Rectangle getHitbox() {
+        return hitbox.getBounds();
+    }
+
+    @Override
+    public void collides(GameObject with) {
+        if (with instanceof Bullet) {
+            if (((Bullet) with).getOwner() != this.id) {
+                this.takeDamage();
+            }
+        } else if (with instanceof Wall) {
+            if (with instanceof BreakableWall && ((BreakableWall) with).getIsBroken()) {
+                return;
+            } else {
+                wallCollision();
+            }
+        } else if (with instanceof PowerUp) {
+            if (with instanceof SpeedPowerUp) {
+                ((SpeedPowerUp) with).setActivationHealth(this.lives);
+                this.R += 2;
+            } else if (with instanceof HealthPowerUp) {
+                ((HealthPowerUp) with).setActivationHealth(this.lives);
+                this.lives++;
+            } else if (with instanceof ShieldPowerUp) {
+                this.hasShield = true;  // Activate shield when picking up ShieldPowerUp
+                shieldCount++;  // Increase shield count
+            }
+            (ResourceManager.getSound("powerup")).playSound();
+            activeBuffs.add((PowerUp) with);
+        }
+    }
+
+    private void wallCollision() {
         this.vx = 0;
         this.vy = 0;
-        if (this.UpPressed) {
+        if (this.upPressed) {
             unToggleUpPressed();
-            this.x = (float) (this.x - 10*Math.cos(Math.toRadians(angle)));
-            this.y = (float) (this.y - 10*Math.sin(Math.toRadians(angle)));
+            this.x = (float) (this.x - 10 * Math.cos(Math.toRadians(angle)));
+            this.y = (float) (this.y - 10 * Math.sin(Math.toRadians(angle)));
             toggleUpPressed();
-        } else if (this.DownPressed) {
+        } else if (this.downPressed) {
             unToggleDownPressed();
             this.x = (float) (this.x + 10 * Math.cos(Math.toRadians(angle)));
             this.y = (float) (this.y + 10 * Math.sin(Math.toRadians(angle)));
@@ -328,4 +303,31 @@ public class Tank extends GameObject implements MovableObjects{ // normally play
         }
     }
 
+    public BufferedImage cameraPosition(BufferedImage world) {
+        int cameraX, cameraY;
+        BufferedImage screenSide;
+
+        if ((int) this.x <= GameConstants.GAME_SCREEN_WIDTH / 4) {
+            cameraX = GameConstants.GAME_SCREEN_WIDTH / 4;
+        } else if ((int) this.x >= (3 * (GameConstants.GAME_SCREEN_WIDTH / 4)) + ((GameConstants.GAME_SCREEN_WIDTH / 4) * 2)) {
+            cameraX = (3 * (GameConstants.GAME_SCREEN_WIDTH / 4)) + ((GameConstants.GAME_SCREEN_WIDTH / 4) * 2);
+        } else {
+            cameraX = (int) this.x;
+        }
+
+        if ((int) this.y <= GameConstants.GAME_SCREEN_HEIGHT / 2) {
+            cameraY = GameConstants.GAME_SCREEN_HEIGHT / 2;
+        } else if (this.y >= GameConstants.GAME_SCREEN_HEIGHT) {
+            cameraY = GameConstants.GAME_SCREEN_HEIGHT;
+        } else {
+            cameraY = (int) this.y;
+        }
+
+        screenSide = world.getSubimage(
+                cameraX - GameConstants.GAME_SCREEN_WIDTH / 4,
+                cameraY - GameConstants.GAME_SCREEN_HEIGHT / 2,
+                GameConstants.GAME_SCREEN_WIDTH / 2, GameConstants.GAME_SCREEN_HEIGHT);
+
+        return screenSide;
+    }
 }

@@ -4,22 +4,17 @@ import tankgamepack.GameConstants;
 import tankgamepack.Launcher;
 import tankgamepack.Resources.ResourceManager;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
 import java.util.List;
 
-/**
- * @author anthony-pc
- */
 public class GameWorld extends JPanel implements Runnable {
 
     private BufferedImage world;
@@ -27,12 +22,10 @@ public class GameWorld extends JPanel implements Runnable {
     private Tank t2;
     private final Launcher lf;
     public int worldSize;
+    private boolean isRunning = true;
+    private boolean resetRequested = false;
 
     List<GameObject> gobjs = new ArrayList<>();
-    // private long tick = 0; // for tick logic, not necessary to be used.
-    List<Animation> anims = new ArrayList<>();
-
-    private boolean isRunning = true;
 
     public GameWorld(Launcher lf) {
         this.lf = lf;
@@ -41,17 +34,21 @@ public class GameWorld extends JPanel implements Runnable {
     @Override
     public void run() {
         Sound bgMusic = ResourceManager.getSound("bgmusic");
-        bgMusic.loopCont();
         bgMusic.setVolume(.3f);
+        bgMusic.loopCont(); // Set the background music to loop continuously
         bgMusic.playSound();
 
         try {
             while (isRunning) {
+                if (resetRequested) {
+                    resetRequested = false;
+                    resetGame();
+                }
                 updateObjs();
                 checkCollision();
                 checkGameOver();
-                this.repaint();   // redraw game, never call paint component directly; repaint happens on different thread
-                Thread.sleep(1000 / 144); // artificially slow game down to prevent it from updating too fast
+                this.repaint();
+                Thread.sleep(1000 / 144);
             }
         } catch (InterruptedException ignored) {
             System.out.println(ignored);
@@ -83,7 +80,7 @@ public class GameWorld extends JPanel implements Runnable {
                         toAdd.add(temp);
                     }
                     if (((Tank) currentObj).expired()) {
-                        gameOver(((Tank) currentObj).getId() == 1 ? 2 : 1); // Pass the winning tank's ID
+                        gameOver(((Tank) currentObj).getId() == 1 ? 2 : 1);
                     }
                 }
             }
@@ -113,33 +110,19 @@ public class GameWorld extends JPanel implements Runnable {
         lf.setWinner(winningTankId);
     }
 
-    /**
-     * Reset game to its initial state.
-     */
     public void resetGame() {
-        this.t1.setX(300);
-        this.t1.setY(300);
+        gobjs.clear();
+        InitializeGame();
     }
 
-    /**
-     * Load all resources for Tank Wars Game. Set all Game Objects to their
-     * initial state as well.
-     */
     public void InitializeGame() {
         this.world = new BufferedImage(
                 GameConstants.GAME_WORLD_WIDTH,
                 GameConstants.GAME_WORLD_HEIGHT,
-                BufferedImage.TYPE_INT_RGB); // floor image
+                BufferedImage.TYPE_INT_RGB);
 
         InputStreamReader isr = new InputStreamReader(Objects.requireNonNull(ResourceManager.class.getClassLoader().getResourceAsStream("maps/TankMapConverted.csv")));
 
-        // 0 = empty space
-        // 9 = unbreakable barrier
-        // 3 = unbreakable wall, collidable
-        // 4-7 = power up
-        // 8 = breakable wall
-
-        // assume csv file follows the proper format (included in txt file)
         try (BufferedReader mapReader = new BufferedReader(isr)) {
             int row = 0;
             String[] gameItems;
@@ -149,7 +132,7 @@ public class GameWorld extends JPanel implements Runnable {
 
                 for (int column = 0; column < gameItems.length; column++) {
                     String gameObj = gameItems[column];
-                    if ("0".equals(gameObj)) continue; // skip over 0s
+                    if ("0".equals(gameObj)) continue;
                     this.gobjs.add(GameObject.newInstance(gameObj, column * 30, row * 30));
                 }
                 row++;
@@ -158,19 +141,13 @@ public class GameWorld extends JPanel implements Runnable {
             throw new RuntimeException(e);
         }
 
-        // Use predefined spawn points for tanks
         int[][] spawnPoints = {
                 {500, 500},
                 {1500, 1500}
         };
 
-        // Randomly choose spawn points for tanks
-        Random rand = new Random();
-        int[] spawnPoint1 = spawnPoints[rand.nextInt(spawnPoints.length)];
-        int[] spawnPoint2 = spawnPoints[rand.nextInt(spawnPoints.length)];
-
-        t1 = new Tank(spawnPoint1[0], spawnPoint1[1], 0, ResourceManager.getSprite("tank1"));
-        t2 = new Tank(spawnPoint2[0], spawnPoint2[1], 0, ResourceManager.getSprite("tank2"));
+        t1 = new Tank(spawnPoints[0][0], spawnPoints[0][1], 0, ResourceManager.getSprite("tank1"));
+        t2 = new Tank(spawnPoints[1][0], spawnPoints[1][1], 0, ResourceManager.getSprite("tank2"));
         TankControl tc1 = new TankControl(t1, KeyEvent.VK_W, KeyEvent.VK_S, KeyEvent.VK_A, KeyEvent.VK_D, KeyEvent.VK_SPACE);
         TankControl tc2 = new TankControl(t2, KeyEvent.VK_UP, KeyEvent.VK_DOWN, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT, KeyEvent.VK_ENTER);
 
@@ -219,9 +196,9 @@ public class GameWorld extends JPanel implements Runnable {
 
     private void checkGameOver() {
         if (t1.expired()) {
-            gameOver(2);  // Blue Tank wins
+            gameOver(2);
         } else if (t2.expired()) {
-            gameOver(1);  // Red Tank wins
+            gameOver(1);
         }
     }
 
@@ -237,16 +214,9 @@ public class GameWorld extends JPanel implements Runnable {
         renderMiniMap(g2);
     }
 
-    /**
-     * TODO:
-     * - make GameWorld aware of bullets
-     *      - Cant have bulletpool here because it would need to know when tank is shooting.
-     *      - Check bullet collision with tank inside the tank class? Would allow for removing
-     *          bullets from the ammo array and deleting them.
-     * - Add Wall Collision Detection
-     * - Remove Tank class from being directly instanciated in GameWorld
-     *      - put it in the gameOBJ list through the map?
-     *      - Make spawn points on map, randomly choose one before spawning tanks
-     *
-     */
+    public void requestReset() {
+        resetRequested = true;
+        this.isRunning = true;
+    }
 }
+

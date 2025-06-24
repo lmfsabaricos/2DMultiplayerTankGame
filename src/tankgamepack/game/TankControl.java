@@ -8,11 +8,7 @@ import java.awt.event.KeyListener;
  * @author anthony-pc
  */
 public class TankControl implements KeyListener {
-    // these variables may or may not be final
-    // if a controls screen is created, these values should not be final
-    // do not make these final if powerups are going to affect them
 
-    // finals can be initialized in the declaration and constructor
 
     /*
     Todo:

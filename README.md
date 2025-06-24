@@ -20,7 +20,7 @@ The jar folder will be used to store the built jar of your term-project.
 ## Version of Java Used:
 Java SE Development Kit 8u271
 ## IDE used: 
-IDE used: IntelliJ IDEA Community Edition 2020.3
+IntelliJ IDEA Community Edition 2020.3
 
 ## Steps to Import project into IDE:
 1. Download and install IntelliJ IDEA.

@@ -18,9 +18,8 @@ The jar folder will be used to store the built jar of your term-project.
 # Required Information when Submitting Tank Game
 
 ## Version of Java Used:
-
+Java SE Development Kit 8u271
 ## IDE used: 
-Version of Java Used: Java SE Development Kit 8u271
 IDE used: IntelliJ IDEA Community Edition 2020.3
 
 ## Steps to Import project into IDE:
